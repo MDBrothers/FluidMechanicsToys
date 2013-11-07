@@ -4,7 +4,6 @@
 //Title: Problem 4: 2D ideal flow numeric simulation
 
 #include "./problem_four.h"
-const double grid_spacing = .2;
 const double tolerance = 1.E-6;
 const int maxiters = 100;
 
@@ -35,6 +34,10 @@ int main(int argc, char* argv[])
     //Sucessfull opened a file with name matching argv[1] for loading boundary conditions
     else 
     {
+	double grid_spacing = 0.0;
+	double uniform_velocity = 0.0;
+	fscanf(infile, "%f", &uniform_velocity);
+	fscanf(infile, "%f", &grid_spacing);
         fscanf(infile, "%d %d", &number_of_rows, &number_of_columns);
         char* token;
 
