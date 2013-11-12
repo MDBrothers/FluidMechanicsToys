@@ -6,6 +6,8 @@
 #include "./problem_four.h"
 const double tolerance = 1.E-6;
 const int maxiters = 100;
+const double rho = 1.2041;
+const double inlet_pressure = 101.25*1000.0;
 
 int main(int argc, char* argv[])
 {
@@ -14,10 +16,18 @@ int main(int argc, char* argv[])
     double* old_grid;
     double* new_grid;
     double** interpolation;
+    double grid_spacing = 0.0;
+    double inlet_velocity = 0.0;
+    double pos_d_y, pos_d_x, neg_d_y, neg_d_x;
+    double pressure, designation, u_vel, v_vel;
 
     int number_of_rows = 0;
     int number_of_columns = 0;
     int number_of_interior_points = 0;
+    int column, row;
+
+    int catcher;
+    
 
     //printf("%d%s", argc, "\n");
     //printf("%s%s", argv[1], "\n");
@@ -25,6 +35,7 @@ int main(int argc, char* argv[])
 
     char *buf = malloc(256*sizeof(char));
     FILE *infile = fopen(argv[1], "r");
+    char* token;
 
     if (infile == NULL) 
     {
@@ -34,12 +45,9 @@ int main(int argc, char* argv[])
     //Sucessfull opened a file with name matching argv[1] for loading boundary conditions
     else 
     {
-	double grid_spacing = 0.0;
-	double uniform_velocity = 0.0;
-	fscanf(infile, "%f", &uniform_velocity);
-	fscanf(infile, "%f", &grid_spacing);
-        fscanf(infile, "%d %d", &number_of_rows, &number_of_columns);
-        char* token;
+	catcher = fscanf(infile, "%lf", &inlet_velocity);
+	catcher = fscanf(infile, "%lf", &grid_spacing);
+        catcher = fscanf(infile, "%d %d", &number_of_rows, &number_of_columns);
 
         //printf("%d %s", number_of_rows, "rows\n");
         //printf("%d %s", number_of_columns, "columns\n");
@@ -55,7 +63,7 @@ int main(int argc, char* argv[])
         //and column is the x axis, this makes it easier 
         //for me to understand.
         int row = number_of_rows -1;
-        int column = 0;
+        column = 0;
        
         //obtain a line from the boundary condition file
         while(fscanf(infile, "%s", buf) != EOF)
@@ -197,20 +205,20 @@ int main(int argc, char* argv[])
    }
 
     printf("Iteration %d complete!\nThe error is %lf\n", numiters, error);
-    printf("See \"stream_output.txt\" for stream function values");
+    printf("See \"stream_output.txt\" for stream function values\n");
     infile = fopen("./stream_output.txt", "w");
 
     //display our stream function values at X = column, Y=row in a (row, column) order
     //print the same information to a file called "output.txt".
     //These positions on each of these text representations will match that in the book
-    int gridrow = 0;
-    int gridcolumn = 0;
-    for(gridrow = number_of_rows - 1; gridrow >= 0; gridrow--)
+    row = 0;
+    column = 0;
+    for(row = number_of_rows - 1; row >= 0; row--)
     {
-        for(gridcolumn =0; gridcolumn < number_of_columns; gridcolumn++)
+        for(column =0; column < number_of_columns; column++)
         {
-            //printf("%.1f (%d, %d), ", new_grid[number_of_columns*gridrow + gridcolumn], gridrow, gridcolumn);
-            fprintf(infile, "%lf ", new_grid[number_of_columns*gridrow + gridcolumn]);
+            //printf("%.1f (%d, %d), ", new_grid[number_of_columns*row + column], row, column);
+            fprintf(infile, "%lf ", new_grid[number_of_columns*row + column]);
         }
         fprintf(infile, "\n");
         //printf("\n");
@@ -218,28 +226,87 @@ int main(int argc, char* argv[])
 
     fclose(infile);
 
-    printf("See \"pressure_output.txt\" for pressure_distribution values\ncorresponding to the top and bottom walls");
-    infile = fopen("./pressure_output.txt", "w");
+    printf("See \"pressure_output.txt\" for pressure_distribution values\ncorresponding to the top and bottom walls\n");
+    FILE * ofile = fopen("./pressure_output.txt", "w");
 
-/*
-    //display our stream function values at X = column, Y=row in a (row, column) order
-    //print the same information to a file called "output.txt".
-    //These positions on each of these text representations will match that in the book
-    int gridrow = 0;
-    int gridcolumn = 0;
-    for(gridrow = number_of_rows - 1; gridrow >= 0; gridrow--)
+    infile = fopen(argv[3], "r");
+
+    if ((infile == NULL) || (ofile == NULL)) 
     {
-        for(gridcolumn =0; gridcolumn < number_of_columns; gridcolumn++)
-        {
-            //printf("%.1f (%d, %d), ", new_grid[number_of_columns*gridrow + gridcolumn], gridrow, gridcolumn);
-            fprintf(infile, "%lf ", new_grid[number_of_columns*gridrow + gridcolumn]);
-        }
-        fprintf(infile, "\n");
-        //printf("\n");
-  
-  }
-*/
+         printf("%s", "failed to open file\n");
+    }
+
+    entry = 0;
+       //obtain a line from the boundary condition file
+    while(fscanf(infile, "%s", buf) != EOF)
+    {
+            //we need to tokenize the line so that we can parse out the numerical information
+            //we define a token as a floating point number, delimited by a comma
+            token = strtok(buf, ",");
+            column = 0;
+
+            //while not out of tokens, do
+            while(token != NULL)
+            {
+                //process the token as a floating point number
+                sscanf(token, "%lf", &designation);
+
+		if(designation == 1.0)
+		{
+			//Am I at the top, bottom edges, vertical wall, 'interior' horizontal boundary?
+			if((entry/number_of_columns) < 1)
+				u_vel = (new_grid[entry] - new_grid[entry + number_of_columns])/grid_spacing;
+			else if (entry > (number_of_rows*number_of_columns - number_of_columns))
+                                u_vel = (new_grid[entry-number_of_columns] - new_grid[entry])/grid_spacing;
+			else if (entry%number_of_columns == 0)
+			{
+				u_vel = 0.0;
+				v_vel = (new_grid[entry+1] - new_grid[entry])/(-grid_spacing);
+			}
+			else if (((entry+1)%number_of_columns) == 0)
+			{
+				u_vel = 0.0;
+				v_vel = (new_grid[entry-1] - new_grid[entry])/grid_spacing;
+			}
+			else
+			{
+				pos_d_y = new_grid[entry-number_of_columns] - new_grid[entry];
+				neg_d_y = new_grid[entry+number_of_columns] - new_grid[entry];
+				pos_d_x = new_grid[entry+1] - new_grid[entry];
+				neg_d_x = new_grid[entry-1] - new_grid[entry];
+
+				if (pos_d_y == 0.0)
+					u_vel = -neg_d_y/grid_spacing;
+				else if (neg_d_y == 0.0)
+					u_vel = pos_d_y/grid_spacing;
+				else
+					u_vel = (pos_d_y - neg_d_y)/(2.0*grid_spacing);
+
+				if (pos_d_x == 0.0)
+					v_vel = neg_d_x/grid_spacing;	
+				else if (neg_d_x == 0.0)
+					v_vel = -pos_d_x/grid_spacing;
+				else
+					v_vel = (neg_d_x - pos_d_x)/(2.0*grid_spacing);
+			}
+
+			//compute pressure using Bernouli equation
+		 	double vel_mag_squared = pow(u_vel, 2.0) + pow(v_vel, 2.0);
+			pressure = -.5*rho*(vel_mag_squared) + inlet_pressure + .5*rho*(inlet_velocity);
+			int my_column = entry%number_of_columns;
+			int my_row = (entry - my_column)/number_of_columns;
+			int y_coordinate = my_row*-1 + number_of_rows;  
+			fprintf(ofile, "%d %d %lf\n", my_column, y_coordinate, pressure);
+		
+		}
+		
+                entry++;
+                token = strtok(NULL, ",");
+            }
+    }
+
     fclose(infile);
+    fclose(ofile);
 
     free(boundary_grid);
     boundary_grid = NULL;

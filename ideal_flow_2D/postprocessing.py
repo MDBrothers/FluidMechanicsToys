@@ -4,9 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sys
 
-node_designation_filename = sys.argv[1]
-stream_function_output_filename = sys.argv[2]
-boundary_conditions_filename = sys.argv[3]
+pressure = sys.argv[1]
 
 def load(fname):
 	''' load file using std open '''
@@ -18,31 +16,28 @@ def load(fname):
 
         f.close()
 
-	return np.concatenate(data)
+	return np.array(np.concatenate(data), dtype=np.float64)
 
 def main():
 	#output files will be loaded into 1-D arrays left to right, top to bottom
 	#grid_shape_data = np.loadtxt(boundary_conditions_filename, delimiter = ' ,', unpack = True)
 
-	grid_shape_data = load(boundary_conditions_filename)
+	pressure_values = load(pressure);	
 
-	print grid_shape_data
-	stream_function_values = np.array(load(stream_function_output_filename));
-	evaluation_nodes = np.array(load(node_designation_filename));	
+	print pressure_values
+	print " "
 
-	uniform_velocity = grid_shape_data[0]
-	grid_spacing = grid_shape_data[1]
-	numrows = grid_shape_data[2]
-	numcols = grid_shape_data[3]
+	print pressure_values[0:pressure_values.size:3].size 
+        print pressure_values[1:pressure_values.size:3].size 
+        print pressure_values[2:pressure_values.size:3].size
 
-	u_velocity_values = np.zeros(stream_function_values.size())
-	v_velocity_values = np.zeros(stream_function_values.size())
-	pressure_values = np.zeros(stream_function_values.size())
-	
-	for entry in range(boundary_nodes.size()):
-		if boundary_nodes[entry] == 1.0:
-			if stream_function_values[entry] != stream_function_values[entry - 1]:
-				v_velocity_values[entry] = 3214234.987
+	import matplotlib.pyplot as plt
+	from mpl_toolkits.mplot3d import Axes3D
+        fig = plt.figure()
+	ax = fig.gca(projection='3d')
+	ax.scatter(pressure_values[0:66:3], pressure_values[1:66:3], pressure_values[2:66:3], label='parametric curve')
+	ax.legend()
+	plt.show()
 
 if __name__ == "__main__":
 	main()
