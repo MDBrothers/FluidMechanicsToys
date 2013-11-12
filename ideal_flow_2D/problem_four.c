@@ -7,7 +7,7 @@
 const double tolerance = 1.E-6;
 const int maxiters = 100;
 const double rho = 1.2041;
-const double inlet_pressure = 101.25*1000.0;
+const double inlet_pressure = 0.0;
 
 int main(int argc, char* argv[])
 {
